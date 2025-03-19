@@ -15,7 +15,7 @@ def stream():
                 "timestamp": time.time()
             }
             yield f"data: {json.dumps(data)}\n\n"
-            time.sleep(1)  # 模拟每秒发送一条消息
+            time.sleep(1)  # 模拟每秒发送一条消息test
     return Response(generate(), content_type='text/event-stream')
 
 if __name__ == '__main__':
