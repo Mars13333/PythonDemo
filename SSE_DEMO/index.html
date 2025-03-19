@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE Demo with Fetch</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .message {
+            margin: 10px 0;
+        }
+        .button-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
+        .button-container button {
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>SSE Demo with Fetch</h1>
+        <!-- 添加结束按钮 -->
+        <div class="button-container">
+          <button id="stopButton">结束</button>
+      </div>
+    <div id="messages"></div>
+
+    <script>
+        // 获取页面上的 messages 容器
+        const messagesContainer = document.getElementById('messages');
+        let reader = null; // 用于存储流的 reader
+
+        // 使用 fetch 发起请求
+        const response = fetch('http://127.0.0.1:5000/stream', {
+            method: 'GET',
+            headers: {
+                'Accept': 'text/event-stream'
+            }
+        });
+
+        // 处理流式响应
+        response.then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            // 获取 ReadableStream
+            reader = response.body.getReader();
+
+            // 读取流数据
+            const stream = new ReadableStream({
+                start(controller) {
+                    function push() {
+                        reader.read().then(({ done, value }) => {
+                            if (done) {
+                                controller.close();
+                                return;
+                            }
+
+                            // 将二进制数据转换为文本
+                            const decoder = new TextDecoder('utf-8');
+                            const chunk = decoder.decode(value, { stream: true });
+
+                            // 处理接收到的数据
+                            if (chunk.startsWith('data: ')) {
+                                const data = JSON.parse(chunk.slice(6));
+                                const messageElement = document.createElement('div');
+                                messageElement.className = 'message';
+                                messageElement.innerHTML = `<p>${data.message}</p><p><small>${new Date(data.timestamp * 1000).toLocaleString()}</small></p>`;
+                                messagesContainer.appendChild(messageElement);
+                            }
+
+                            // 继续读取
+                            push();
+                        }).catch(err => {
+                            console.error('Error reading stream:', err);
+                            controller.error(err);
+                        });
+                    }
+
+                    push();
+                }
+            });
+
+            // 将流数据转换为文本
+            return new Response(stream).text();
+        }).catch(error => {
+            console.error('Fetch error:', error);
+            messagesContainer.innerHTML = '<p style="color: red;">Connection to server failed.</p>';
+        });
+
+        // 添加结束按钮的点击事件
+        document.getElementById('stopButton').addEventListener('click', () => {
+            if (reader) {
+                reader.cancel(); // 关闭流
+                reader = null;
+                messagesContainer.innerHTML = '<p style="color: green;">Stream has been stopped.</p>';
+            }
+        });
+    </script>
+</body>
+</html>
