@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SSE Demo with EventSource</title>
+    <title>Stream2 Demo</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -12,6 +12,12 @@
       }
       .message {
         margin: 10px 0;
+        text-align: left;
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
       }
       .button-container {
         position: absolute;
@@ -26,7 +32,7 @@
     </style>
   </head>
   <body>
-    <h1>SSE Demo with EventSource</h1>
+    <h1>Stream2 API Demo</h1>
     <div class="button-container">
       <button id="stopButton">结束</button>
     </div>
@@ -37,35 +43,35 @@
       let eventSource = null;
 
       function startSSE() {
-        eventSource = new EventSource('http://127.0.0.1:5000/stream');
+        eventSource = new EventSource('http://127.0.0.1:5000/stream2');
 
         eventSource.onmessage = function (event) {
           const data = JSON.parse(event.data);
           const messageElement = document.createElement('div');
           messageElement.className = 'message';
-          messageElement.innerHTML = `<p>${data.message}</p><p><small>${new Date(data.timestamp * 1000).toLocaleString()}</small></p>`;
-          messagesContainer.appendChild(messageElement);
+
+          // 根据API响应格式调整显示内容
+          if (data.choices && data.choices[0].delta.content) {
+            messageElement.innerHTML = `<p>${data.choices[0].delta.content}</p>`;
+            messagesContainer.appendChild(messageElement);
+          }
         };
 
-        // 添加自定义事件处理
         eventSource.addEventListener('end', function () {
           messagesContainer.innerHTML += '<p style="color: green;">Stream completed successfully.</p>';
           eventSource.close();
         });
 
         eventSource.onerror = function () {
-          // 只有当连接不是正常结束时才显示错误
           if (eventSource.readyState !== EventSource.CLOSED) {
-            messagesContainer.innerHTML = '<p style="color: red;">Connection to server failed.</p>';
+            messagesContainer.innerHTML = '<p style="color: red;">Connection to server failed. </p>';
           }
           eventSource.close();
         };
       }
 
-      // 启动SSE连接
       startSSE();
 
-      // 结束按钮点击事件
       document.getElementById('stopButton').addEventListener('click', () => {
         if (eventSource) {
           eventSource.close();
