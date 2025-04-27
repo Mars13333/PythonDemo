@@ -41,24 +41,53 @@
     <script>
       const messagesContainer = document.getElementById('messages');
       let eventSource = null;
+      let contentContainer = null;
 
       function startSSE() {
         eventSource = new EventSource('http://127.0.0.1:5000/stream2');
 
         eventSource.onmessage = function (event) {
-          const data = JSON.parse(event.data);
-          const messageElement = document.createElement('div');
-          messageElement.className = 'message';
-
-          // 根据API响应格式调整显示内容
-          if (data.choices && data.choices[0].delta.content) {
-            messageElement.innerHTML = `<p>${data.choices[0].delta.content}</p>`;
-            messagesContainer.appendChild(messageElement);
+          try {
+            const data = JSON.parse(event.data);
+            
+            // 首次创建消息容器
+            if (!contentContainer) {
+              contentContainer = document.createElement('div');
+              contentContainer.className = 'message';
+              messagesContainer.appendChild(contentContainer);
+            }
+            
+            // 根据API响应格式调整显示内容
+            if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+              // 获取内容并处理markdown格式
+              let content = data.choices[0].delta.content;
+              // 简单去除常见markdown标记
+              content = content.replace(/\*\*(.*?)\*\*/g, '$1')  // 粗体
+                               .replace(/\*(.*?)\*/g, '$1')      // 斜体
+                               .replace(/\[(.*?)\]\((.*?)\)/g, '$1') // 链接
+                               .replace(/#{1,6}\s/g, '')         // 标题
+                               .replace(/```[\s\S]*?```/g, '')   // 代码块
+                               .replace(/`(.*?)`/g, '$1');       // 内联代码
+              
+              // 追加内容而不是创建新元素
+              contentContainer.innerHTML += content;
+            }
+          } catch (e) {
+            console.error("解析JSON失败:", e, "原始数据:", event.data);
+            // 显示原始数据
+            if (!contentContainer) {
+              contentContainer = document.createElement('div');
+              contentContainer.className = 'message';
+              messagesContainer.appendChild(contentContainer);
+            }
+            contentContainer.style.color = 'blue';
+            contentContainer.innerHTML += event.data;
           }
         };
 
         eventSource.addEventListener('end', function () {
           messagesContainer.innerHTML += '<p style="color: green;">Stream completed successfully.</p>';
+          contentContainer = null;
           eventSource.close();
         });
 
