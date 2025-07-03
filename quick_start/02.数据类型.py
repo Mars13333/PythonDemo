@@ -209,7 +209,7 @@ correct_rgba[-1] = "Alpha"
 correct_rgba
 ["Red", "Green", "Blue", "Alpha"]
 rgba
-["Red", "Green", "Blue", "Alph"]
+["Red", "Green", "Blue", "Alpha"]
 
 
 # 为切片赋值可以改变列表大小，甚至清空整个列表：
